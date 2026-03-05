@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SSC Hustlers - Results</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Exo+2:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = "https://yjscbbfolnzkzavzulbv.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlqc2NiYmZvbG56a3phdnp1bGJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MDA2MTYsImV4cCI6MjA4ODI3NjYxNn0.cA6Jf2pPHfNjK_1Ea_6-GK2TfivkQfhu2eUqgMLqUgo";
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+</script>
+<style>
+:root{--neon-blue:#00d4ff;--neon-pink:#ff006e;--neon-gold:#ffd700;--dark-bg:#050a14;--card-bg:#0d1626;--card-border:#1a2a4a;--text-main:#e8f4ff;--text-muted:#7a99bb}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--dark-bg);color:var(--text-main);font-family:'Exo 2',sans-serif;min-height:100vh}
+.topbar{background:rgba(5,10,20,.97);border-bottom:1px solid var(--card-border);padding:0 32px;height:64px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-family:'Rajdhani',sans-serif;font-size:1.4rem;font-weight:700;background:linear-gradient(135deg,#00d4ff,#ff006e);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.main{max-width:1100px;margin:0 auto;padding:32px 20px}
+.result-hero{background:linear-gradient(135deg,rgba(0,212,255,.06),rgba(255,0,110,.04));border:1px solid var(--card-border);border-radius:20px;padding:40px;display:flex;align-items:center;gap:40px;margin-bottom:32px;flex-wrap:wrap}
+.score-circle{width:150px;height:150px;border-radius:50%;background:conic-gradient(var(--neon-blue) 0%,rgba(0,212,255,.1) 0%);display:flex;flex-direction:column;align-items:center;justify-content:center;border:3px solid rgba(0,212,255,.2);flex-shrink:0;position:relative;transition:background 1s}
+.score-num{font-family:'Rajdhani',sans-serif;font-size:2rem;font-weight:700;color:var(--neon-blue);line-height:1}
+.score-sub{font-size:.75rem;color:var(--text-muted);margin-top:4px}
+.hero-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:16px;flex:1}
+.hero-stat{text-align:center;padding:16px;background:rgba(255,255,255,.02);border:1px solid var(--card-border);border-radius:12px}
+.stat-val{font-family:'Rajdhani',sans-serif;font-size:1.5rem;font-weight:700}
+.stat-lbl{font-size:.75rem;color:var(--text-muted);margin-top:4px}
+.correct-val{color:#00ff88}.wrong-val{color:#ff4466}.skip-val{color:var(--neon-gold)}.acc-val{color:var(--neon-blue)}.rank-val{color:var(--neon-pink)}
+.action-btns{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:32px}
+.btn{padding:12px 28px;border-radius:8px;font-family:'Exo 2',sans-serif;font-weight:600;font-size:.9rem;cursor:pointer;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.btn-primary{background:linear-gradient(135deg,#00d4ff,#0066ff);border:none;color:#fff}
+.btn-secondary{background:transparent;border:1px solid var(--card-border);color:var(--text-muted)}
+.btn-secondary:hover{border-color:var(--neon-blue);color:var(--neon-blue)}
+.tabs{display:flex;gap:4px;background:rgba(255,255,255,.03);padding:5px;border-radius:10px;margin-bottom:24px;width:fit-content}
+.tab{padding:10px 24px;border-radius:7px;cursor:pointer;font-size:.85rem;font-weight:600;color:var(--text-muted);transition:all .2s;border:none;background:transparent;font-family:'Exo 2',sans-serif}
+.tab.active{background:rgba(0,212,255,.1);color:var(--neon-blue);border:1px solid rgba(0,212,255,.2)}
+.tab-content{display:none}.tab-content.active{display:block}
+/* Leaderboard */
+.podium{display:flex;align-items:flex-end;justify-content:center;gap:16px;margin-bottom:32px;padding:24px}
+.podium-item{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.podium-name{font-size:.85rem;font-weight:600;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.podium-score{font-family:'Rajdhani',sans-serif;font-size:1rem;color:var(--text-muted)}
+.podium-rank{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-size:1.5rem;font-weight:700}
+.podium-stand{width:80px;border-radius:6px 6px 0 0;display:flex;align-items:center;justify-content:center;font-size:.75rem;color:rgba(255,255,255,.5)}
+.gold-rank{background:linear-gradient(135deg,rgba(255,215,0,.3),rgba(255,180,0,.1));border:2px solid var(--neon-gold);color:var(--neon-gold)}
+.gold-stand{background:linear-gradient(180deg,rgba(255,215,0,.2),rgba(255,215,0,.05));height:80px}
+.silver-rank{background:linear-gradient(135deg,rgba(192,192,192,.3),rgba(160,160,160,.1));border:2px solid #c0c0c0;color:#c0c0c0}
+.silver-stand{background:linear-gradient(180deg,rgba(192,192,192,.15),transparent);height:60px}
+.bronze-rank{background:linear-gradient(135deg,rgba(205,127,50,.3),rgba(180,100,30,.1));border:2px solid #cd7f32;color:#cd7f32}
+.bronze-stand{background:linear-gradient(180deg,rgba(205,127,50,.15),transparent);height:44px}
+.lb-table{width:100%;border-collapse:collapse}
+.lb-table th{padding:10px 14px;text-align:left;font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--card-border);font-weight:600}
+.lb-table td{padding:12px 14px;border-bottom:1px solid rgba(26,42,74,.5);font-size:.85rem}
+.lb-table tr:hover td{background:rgba(255,255,255,.02)}
+.lb-table tr.current-user td{background:rgba(0,212,255,.05);border-left:2px solid var(--neon-blue)}
+.rank-badge{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;font-family:'Rajdhani',sans-serif}
+/* Answer Review */
+.q-review{background:rgba(255,255,255,.02);border:1px solid var(--card-border);border-radius:12px;padding:20px;margin-bottom:16px}
+.q-review-header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.q-num{font-family:'Rajdhani',sans-serif;font-size:.85rem;color:var(--text-muted)}
+.q-review-text{font-size:.95rem;line-height:1.6;margin-bottom:16px}
+.review-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.r-opt{padding:10px 14px;border-radius:8px;border:1px solid var(--card-border);font-size:.85rem;display:flex;gap:8px;align-items:center}
+.r-opt.correct{border-color:#00ff88;background:rgba(0,255,136,.06);color:#00ff88}
+.r-opt.user-wrong{border-color:#ff4466;background:rgba(255,68,102,.06);color:#ff4466}
+.r-opt.user-correct{border-color:#00ff88;background:rgba(0,255,136,.1)}
+.explanation{font-size:.8rem;color:var(--text-muted);margin-top:10px;padding:8px 12px;background:rgba(0,212,255,.04);border-left:2px solid rgba(0,212,255,.3);border-radius:4px}
+.loading-text{text-align:center;padding:40px;color:var(--text-muted)}
+.spinner{display:inline-block;width:24px;height:24px;border:2px solid rgba(0,212,255,.2);border-top-color:#00d4ff;border-radius:50%;animation:spin 1s linear infinite;margin-right:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">⚡ SSC Hustlers</div>
+  <div style="font-size:.85rem;color:var(--text-muted)" id="quizNameBar">Result</div>
+  <a href="dashboard.html" class="btn btn-secondary" style="padding:8px 20px;font-size:.85rem">← Dashboard</a>
+</div>
+
+<div class="main">
+  <!-- Score Hero -->
+  <div class="result-hero">
+    <div class="score-circle" id="scoreCircle">
+      <div class="score-num" id="scoreNum">--</div>
+      <div class="score-sub">SCORE</div>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="stat-val correct-val" id="correctVal">--</div><div class="stat-lbl">✅ Correct</div></div>
+      <div class="hero-stat"><div class="stat-val wrong-val" id="wrongVal">--</div><div class="stat-lbl">❌ Wrong</div></div>
+      <div class="hero-stat"><div class="stat-val skip-val" id="skipVal">--</div><div class="stat-lbl">⏭ Skipped</div></div>
+      <div class="hero-stat"><div class="stat-val acc-val" id="accVal">--%</div><div class="stat-lbl">🎯 Accuracy</div></div>
+      <div class="hero-stat"><div class="stat-val rank-val" id="rankVal">#--</div><div class="stat-lbl">🏆 Your Rank</div></div>
+    </div>
+  </div>
+
+  <div class="action-btns">
+    <a href="dashboard.html" class="btn btn-primary">🏠 Back to Dashboard</a>
+    <button onclick="switchTab('review')" class="btn btn-secondary">📝 Review Answers</button>
+    <button onclick="shareResult()" class="btn btn-secondary">📤 Share Result</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('leaderboard')">🏆 Leaderboard</button>
+    <button class="tab" onclick="switchTab('review')">📝 Answer Review</button>
+  </div>
+
+  <!-- Leaderboard Tab -->
+  <div class="tab-content active" id="tab-leaderboard">
+    <div id="lbContent"><div class="loading-text"><span class="spinner"></span>Leaderboard load ho rahi hai...</div></div>
+  </div>
+
+  <!-- Review Tab -->
+  <div class="tab-content" id="tab-review">
+    <div id="reviewContent"><div class="loading-text"><span class="spinner"></span>Answers load ho rahe hain...</div></div>
+  </div>
+</div>
+
+<script>
+const urlParams = new URLSearchParams(window.location.search);
+const quizId = urlParams.get('quiz_id');
+const result = JSON.parse(localStorage.getItem('quizResult') || '{}');
+const userName = JSON.parse(localStorage.getItem('sscUser') || '{"name":"You"}').name || 'You';
+
+// ============================================
+// SHOW MY SCORE
+// ============================================
+function showMyScore() {
+  if (!result.score && result.score !== 0) return;
+  document.getElementById('scoreNum').textContent = result.score;
+  document.getElementById('correctVal').textContent = result.correct || 0;
+  document.getElementById('wrongVal').textContent = result.wrong || 0;
+  document.getElementById('skipVal').textContent = result.skipped || 0;
+  document.getElementById('accVal').textContent = (result.accuracy || 0) + '%';
+  const total = result.total || 10;
+  const pct = Math.max(0, Math.min(100, (result.score / (total * 2)) * 100));
+  document.getElementById('scoreCircle').style.background =
+    `conic-gradient(var(--neon-blue) ${pct}%, rgba(0,212,255,.08) 0%)`;
+}
+
+// ============================================
+// LOAD LEADERBOARD FROM SUPABASE
+// ============================================
+async function loadLeaderboard() {
+  const lbEl = document.getElementById('lbContent');
+  if (!quizId) {
+    lbEl.innerHTML = '<div class="loading-text">Quiz ID nahi mila — leaderboard unavailable</div>';
+    return;
+  }
+
+  const { data, error } = await db
+    .from('rank_list')
+    .select('*')
+    .eq('quiz_id', quizId)
+    .order('score', { ascending: false })
+    .order('accuracy', { ascending: false })
+    .order('time_taken_seconds', { ascending: true })
+    .limit(100);
+
+  if (error) { lbEl.innerHTML = `<div class="loading-text">Error: ${error.message}</div>`; return; }
+  if (!data || data.length === 0) {
+    lbEl.innerHTML = '<div class="loading-text">Abhi koi rank nahi hai. Pehle submit karo!</div>';
+    return;
+  }
+
+  // Apni rank dhundho
+  const myRank = data.findIndex(r => r.user_name === userName) + 1;
+  if (myRank > 0) document.getElementById('rankVal').textContent = '#' + myRank;
+
+  // Podium (top 3)
+  const top3 = data.slice(0, 3);
+  const podiumOrder = [top3[1], top3[0], top3[2]].filter(Boolean); // silver, gold, bronze order
+  const podiumClasses = ['silver', 'gold', 'bronze'];
+  const podiumH = ['60px','80px','44px'];
+  const podiumEmojis = ['🥈','🥇','🥉'];
+
+  let podiumHtml = '<div class="podium">';
+  podiumOrder.forEach((entry, i) => {
+    const realRank = data.indexOf(entry) + 1;
+    podiumHtml += `
+      <div class="podium-item">
+        <div class="podium-rank ${podiumClasses[i]}-rank">${podiumEmojis[i]}</div>
+        <div class="podium-name">${entry.user_name}</div>
+        <div class="podium-score">${entry.score} pts</div>
+        <div class="podium-stand ${podiumClasses[i]}-stand" style="height:${podiumH[i]}">#${realRank}</div>
+      </div>`;
+  });
+  podiumHtml += '</div>';
+
+  // Table
+  let tableHtml = `<table class="lb-table">
+    <thead><tr>
+      <th>Rank</th><th>Name</th><th>City</th><th>Score</th><th>Accuracy</th><th>Time</th>
+    </tr></thead><tbody>`;
+
+  data.forEach((entry, i) => {
+    const rank = i + 1;
+    const isMe = entry.user_name === userName;
+    const rankColor = rank===1?'var(--neon-gold)':rank===2?'#c0c0c0':rank===3?'#cd7f32':'var(--text-muted)';
+    const mins = Math.floor(entry.time_taken_seconds / 60);
+    const secs = entry.time_taken_seconds % 60;
+    tableHtml += `<tr class="${isMe?'current-user':''}">
+      <td><div class="rank-badge" style="background:rgba(255,255,255,.05);color:${rankColor}">${rank}</div></td>
+      <td style="font-weight:600">${entry.user_name}${isMe?' <span style="font-size:.7rem;color:var(--neon-blue)">(You)</span>':''}</td>
+      <td style="color:var(--text-muted)">${entry.user_city || '—'}</td>
+      <td style="font-family:'Rajdhani',sans-serif;font-size:1rem;color:var(--neon-blue)">${entry.score}</td>
+      <td style="color:#00ff88">${entry.accuracy}%</td>
+      <td style="color:var(--text-muted)">${mins}m ${String(secs).padStart(2,'0')}s</td>
+    </tr>`;
+  });
+  tableHtml += '</tbody></table>';
+
+  lbEl.innerHTML = podiumHtml + tableHtml;
+}
+
+// ============================================
+// ANSWER REVIEW
+// ============================================
+function loadReview() {
+  const reviewEl = document.getElementById('reviewContent');
+  if (!result.questions || result.questions.length === 0) {
+    reviewEl.innerHTML = '<div class="loading-text">Review data nahi mila</div>';
+    return;
+  }
+
+  let html = '';
+  result.questions.forEach((q, i) => {
+    const userAns = result.answers[i]; // 0-3 index ya null
+    const correctIdx = q.ans;
+    const isSkipped = userAns === null || userAns === undefined;
+    const isCorrect = !isSkipped && userAns === correctIdx;
+    const statusIcon = isSkipped ? '⏭' : isCorrect ? '✅' : '❌';
+    const labels = ['A','B','C','D'];
+
+    let optsHtml = '';
+    q.opts.forEach((opt, j) => {
+      let cls = 'r-opt';
+      if (j === correctIdx) cls += ' correct';
+      else if (!isSkipped && j === userAns && !isCorrect) cls += ' user-wrong';
+      optsHtml += `<div class="${cls}"><strong>${labels[j]}.</strong> ${opt}</div>`;
+    });
+
+    html += `<div class="q-review">
+      <div class="q-review-header">
+        <div class="q-num">Q${i+1}</div>
+        <div style="font-size:.85rem">${statusIcon} ${isSkipped?'Skipped':isCorrect?'Correct':'Wrong'}</div>
+        <div style="font-size:.75rem;color:var(--text-muted);margin-left:auto">${q.section||''}</div>
+      </div>
+      <div class="q-review-text">${q.q}</div>
+      <div class="review-opts">${optsHtml}</div>
+    </div>`;
+  });
+
+  reviewEl.innerHTML = html;
+}
+
+// ============================================
+// TABS
+// ============================================
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', ['leaderboard','review'][i] === name);
+  });
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+function shareResult() {
+  const text = `🏆 SSC Hustlers par mera result!\nScore: ${result.score} | Accuracy: ${result.accuracy}% | Correct: ${result.correct}\nAap bhi try karo!`;
+  if (navigator.share) navigator.share({ title:'SSC Hustlers Result', text });
+  else { navigator.clipboard.writeText(text); alert('Result copy ho gaya!'); }
+}
+
+// Init
+showMyScore();
+loadLeaderboard();
+loadReview();
+</script>
+</body>
+</html>

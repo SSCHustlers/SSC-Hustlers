@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SSC Hustlers - Quiz</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Exo+2:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = "https://yjscbbfolnzkzavzulbv.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlqc2NiYmZvbG56a3phdnp1bGJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MDA2MTYsImV4cCI6MjA4ODI3NjYxNn0.cA6Jf2pPHfNjK_1Ea_6-GK2TfivkQfhu2eUqgMLqUgo";
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+</script>
+<style>
+:root{--neon-blue:#00d4ff;--neon-pink:#ff006e;--neon-gold:#ffd700;--dark-bg:#050a14;--card-bg:#0d1626;--card-border:#1a2a4a;--text-main:#e8f4ff;--text-muted:#7a99bb}
+*{margin:0;padding:0;box-sizing:border-box}body{background:var(--dark-bg);color:var(--text-main);font-family:'Exo 2',sans-serif;min-height:100vh}
+.quiz-topbar{background:rgba(5,10,20,.97);border-bottom:1px solid var(--card-border);padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.quiz-title{font-family:'Rajdhani',sans-serif;font-size:1.1rem;font-weight:700}
+.timer-box{display:flex;align-items:center;gap:8px;background:rgba(255,0,110,.1);border:1px solid rgba(255,0,110,.3);padding:8px 18px;border-radius:8px;font-family:'Rajdhani',sans-serif;font-size:1.2rem;font-weight:700;color:var(--neon-pink)}
+.timer-box.warning{background:rgba(255,0,0,.15);border-color:rgba(255,0,0,.5);color:#ff3333;animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.6}}
+.progress-info{display:flex;align-items:center;gap:16px;font-size:.85rem;color:var(--text-muted)}
+.quiz-layout{display:grid;grid-template-columns:1fr 280px;gap:0;min-height:calc(100vh - 64px)}
+.question-area{padding:32px;border-right:1px solid var(--card-border);overflow-y:auto}
+.section-pill{display:inline-flex;align-items:center;gap:8px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);color:var(--neon-blue);padding:5px 14px;border-radius:20px;font-size:.8rem;font-weight:600;margin-bottom:20px}
+.q-counter{color:var(--text-muted);font-size:.85rem;margin-bottom:12px}
+.q-text{font-size:1.05rem;line-height:1.7;margin-bottom:28px;font-weight:500}
+.options{display:flex;flex-direction:column;gap:12px;margin-bottom:32px}
+.option{display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.02);border:1px solid var(--card-border);border-radius:10px;cursor:pointer;transition:all .2s;font-size:.95rem}
+.option:hover{border-color:rgba(0,212,255,.4);background:rgba(0,212,255,.05)}
+.option.selected{border-color:var(--neon-blue);background:rgba(0,212,255,.1)}
+.option-label{width:28px;height:28px;border-radius:50%;border:1px solid var(--card-border);display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;flex-shrink:0;transition:all .2s}
+.option.selected .option-label{background:var(--neon-blue);border-color:var(--neon-blue);color:#000}
+.q-actions{display:flex;gap:12px;flex-wrap:wrap}
+.btn-action{padding:11px 24px;border-radius:8px;font-family:'Exo 2',sans-serif;font-weight:600;font-size:.9rem;cursor:pointer;transition:all .2s}
+.btn-prev{background:transparent;border:1px solid var(--card-border);color:var(--text-muted)}.btn-prev:hover{border-color:var(--neon-blue);color:var(--neon-blue)}
+.btn-mark{background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.3);color:var(--neon-gold)}
+.btn-next{background:linear-gradient(135deg,#00d4ff,#0066ff);border:none;color:#fff}.btn-next:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,212,255,.4)}
+.btn-submit-final{background:linear-gradient(135deg,#ff006e,#cc0055);border:none;color:#fff;padding:11px 28px}.btn-submit-final:hover{transform:translateY(-1px)}
+.quiz-sidebar{padding:24px;overflow-y:auto;background:rgba(13,22,38,.5)}
+.sidebar-section{margin-bottom:24px}
+.sidebar-label{font-size:.8rem;font-weight:700;color:var(--text-muted);letter-spacing:1px;margin-bottom:12px}
+.q-palette{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.q-btn{width:36px;height:36px;border-radius:6px;border:1px solid var(--card-border);background:transparent;color:var(--text-muted);font-size:.8rem;font-weight:600;cursor:pointer;transition:all .15s;font-family:'Exo 2',sans-serif}
+.q-btn.current{border-color:var(--neon-blue);background:rgba(0,212,255,.15);color:var(--neon-blue)}
+.q-btn.answered{background:rgba(0,255,136,.15);border-color:#00ff88;color:#00ff88}
+.q-btn.marked{background:rgba(255,215,0,.15);border-color:var(--neon-gold);color:var(--neon-gold)}
+.progress-bar{height:4px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden;margin-bottom:20px}
+.progress-fill{height:100%;background:linear-gradient(90deg,#00d4ff,#0066ff);border-radius:2px;transition:width .3s}
+.legend{display:flex;flex-direction:column;gap:8px;font-size:.8rem}
+.legend-item{display:flex;align-items:center;gap:8px;color:var(--text-muted)}
+.legend-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+/* Loading overlay */
+.loading-overlay{position:fixed;inset:0;background:rgba(5,10,20,.95);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.loading-overlay.hide{display:none}
+.spinner{width:48px;height:48px;border:3px solid rgba(0,212,255,.2);border-top-color:#00d4ff;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Submit overlay */
+.submit-overlay{position:fixed;inset:0;background:rgba(5,10,20,.95);z-index:999;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:20px}
+.submit-overlay.show{display:flex}
+.submit-spinner{width:56px;height:56px;border:4px solid rgba(0,212,255,.2);border-top-color:#00d4ff;border-radius:50%;animation:spin 1s linear infinite;margin-bottom:8px}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div style="font-family:'Rajdhani',sans-serif;font-size:1.2rem;color:var(--neon-blue)">Questions Load Ho Rahi Hain...</div>
+</div>
+
+<!-- Submitting -->
+<div class="submit-overlay" id="submitOverlay">
+  <div class="submit-spinner"></div>
+  <div style="font-family:'Rajdhani',sans-serif;font-size:1.4rem;color:var(--neon-blue)">Result Save Ho Raha Hai...</div>
+  <div style="color:var(--text-muted);font-size:.9rem">Thoda rukiye, score Supabase mein save ho raha hai</div>
+</div>
+
+<div class="quiz-topbar">
+  <div class="quiz-title" id="quizTitleBar">📝 Loading...</div>
+  <div class="timer-box" id="timerBox">⏱ <span id="timer">60:00</span></div>
+  <div class="progress-info">
+    <span id="answeredCount">0</span>/<span id="totalCount">0</span> Answered
+    <button onclick="submitQuiz()" style="padding:8px 20px;background:linear-gradient(135deg,#ff006e,#cc0055);border:none;border-radius:6px;color:#fff;font-family:'Exo 2',sans-serif;font-weight:700;cursor:pointer;font-size:.85rem">Submit Test</button>
+  </div>
+</div>
+
+<div class="quiz-layout">
+  <div class="question-area">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="section-pill" id="sectionPill">📚 Loading...</div>
+    <div class="q-counter" id="qCounter">Question 1 of --</div>
+    <div class="q-text" id="qText">Questions load ho rahi hain...</div>
+    <div class="options" id="optionsContainer"></div>
+    <div class="q-actions">
+      <button class="btn-action btn-prev" onclick="prevQ()">← Previous</button>
+      <button class="btn-action btn-mark" onclick="markQ()">🔖 Mark for Review</button>
+      <button class="btn-action btn-next" onclick="nextQ()">Next →</button>
+      <button class="btn-action btn-submit-final" onclick="submitQuiz()">Submit Test</button>
+    </div>
+  </div>
+  <div class="quiz-sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">QUESTION PALETTE</div>
+      <div class="q-palette" id="palette"></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">LEGEND</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(0,255,136,.3)"></div>Answered</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(0,212,255,.3)"></div>Current</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(255,215,0,.3)"></div>Marked for Review</div>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">MARKING SCHEME</div>
+      <div style="font-size:.8rem;color:var(--text-muted);line-height:1.8" id="markingScheme">Loading...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================
+// STATE
+// ============================================
+let questions = [];
+let answers = [];
+let marked = [];
+let current = 0;
+let timeLeft = 3600;
+let interval = null;
+let quizData = null;
+let quizId = null;
+
+// URL se quiz_id lo
+const urlParams = new URLSearchParams(window.location.search);
+quizId = urlParams.get('quiz_id');
+
+// ============================================
+// INIT — Page load pe
+// ============================================
+async function initQuiz() {
+  if (!quizId) {
+    // Fallback: pehli live quiz lo
+    const { data: quizzes } = await db.from('quizzes').select('*').eq('status','Live').limit(1);
+    if (quizzes && quizzes.length > 0) {
+      quizId = quizzes[0].id;
+      quizData = quizzes[0];
+    } else {
+      // Demo questions agar Supabase mein kuch nahi
+      loadDemoQuestions();
+      return;
+    }
+  } else {
+    const { data } = await db.from('quizzes').select('*').eq('id', quizId).single();
+    quizData = data;
+  }
+
+  if (!quizData) { loadDemoQuestions(); return; }
+
+  // Timer set karo
+  timeLeft = (quizData.duration_minutes || 60) * 60;
+
+  // Title set karo
+  document.getElementById('quizTitleBar').textContent = '📝 ' + quizData.title;
+  document.getElementById('markingScheme').innerHTML =
+    `+${quizData.marks_correct} correct<br>${quizData.marks_wrong} wrong<br>0 skipped`;
+
+  // Questions fetch karo
+  const { data: qs, error } = await db
+    .from('questions')
+    .select('*')
+    .eq('quiz_id', quizId)
+    .order('question_order', { ascending: true });
+
+  if (error || !qs || qs.length === 0) {
+    loadDemoQuestions();
+    return;
+  }
+
+  questions = qs;
+  answers = new Array(questions.length).fill(null);
+  marked = new Array(questions.length).fill(false);
+
+  document.getElementById('totalCount').textContent = questions.length;
+  document.getElementById('loadingOverlay').classList.add('hide');
+
+  startTimer();
+  renderQ();
+}
+
+// ============================================
+// DEMO QUESTIONS (Supabase mein data nahi hai toh)
+// ============================================
+function loadDemoQuestions() {
+  questions = [
+    {id:'q1',question_text:"Reserve Bank of India ka headquarters kahan hai?",option_a:"New Delhi",option_b:"Mumbai",option_c:"Kolkata",option_d:"Chennai",correct_option:"B",section:"General Awareness"},
+    {id:'q2',question_text:"India ke pehle Prime Minister kaun the?",option_a:"Mahatma Gandhi",option_b:"Sardar Patel",option_c:"Jawaharlal Nehru",option_d:"Rajendra Prasad",correct_option:"C",section:"General Awareness"},
+    {id:'q3',question_text:"Laal grah kise kehte hain?",option_a:"Venus",option_b:"Mars",option_c:"Jupiter",option_d:"Saturn",correct_option:"B",section:"General Science"},
+    {id:'q4',question_text:"Paani ka chemical formula kya hai?",option_a:"H2SO4",option_b:"CO2",option_c:"H2O",option_d:"NaCl",correct_option:"C",section:"General Science"},
+    {id:'q5',question_text:"SSC CGL ka full form kya hai?",option_a:"Staff Selection Commission Combined Graduate Level",option_b:"Senior Service Commission Combined Graduate Level",option_c:"Staff Service Commission Common Graduate Level",option_d:"Senior Selection Commission Combined Graduate Level",correct_option:"A",section:"General Awareness"},
+    {id:'q6',question_text:"'Bihar ka Shok' kis nadi ko kaha jaata hai?",option_a:"Ganga",option_b:"Yamuna",option_c:"Kosi",option_d:"Son",correct_option:"C",section:"General Awareness"},
+    {id:'q7',question_text:"Bharat ka Samvidhan kab lagu hua?",option_a:"15 August 1947",option_b:"26 January 1950",option_c:"2 October 1869",option_d:"26 November 1949",correct_option:"B",section:"Polity"},
+    {id:'q8',question_text:"LPG ka full form kya hai?",option_a:"Liquefied Petroleum Gas",option_b:"Liquid Propane Gas",option_c:"Low Pressure Gas",option_d:"Liquid Petroleum Gas",correct_option:"A",section:"General Science"},
+    {id:'q9',question_text:"Kshetrafal ke hisab se sabse chhota rajya kaun sa hai?",option_a:"Sikkim",option_b:"Goa",option_c:"Tripura",option_d:"Manipur",correct_option:"B",section:"Geography"},
+    {id:'q10',question_text:"Telephone kisne ijaad kiya?",option_a:"Thomas Edison",option_b:"Nikola Tesla",option_c:"Alexander Graham Bell",option_d:"Albert Einstein",correct_option:"C",section:"General Awareness"},
+  ];
+  answers = new Array(questions.length).fill(null);
+  marked = new Array(questions.length).fill(false);
+  quizData = { title:'SSC CGL Demo Test', duration_minutes:60, marks_correct:2, marks_wrong:-0.5 };
+  document.getElementById('quizTitleBar').textContent = '📝 SSC CGL Demo Test';
+  document.getElementById('markingScheme').innerHTML = '+2 correct<br>-0.5 wrong<br>0 skipped';
+  document.getElementById('totalCount').textContent = questions.length;
+  document.getElementById('loadingOverlay').classList.add('hide');
+  startTimer();
+  renderQ();
+}
+
+// ============================================
+// TIMER
+// ============================================
+function startTimer() {
+  const timerEl = document.getElementById('timer');
+  interval = setInterval(() => {
+    timeLeft--;
+    const m = Math.floor(timeLeft / 60), s = timeLeft % 60;
+    timerEl.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    if (timeLeft <= 300) document.getElementById('timerBox').classList.add('warning');
+    if (timeLeft <= 0) { clearInterval(interval); submitQuiz(); }
+  }, 1000);
+}
+
+// ============================================
+// RENDER QUESTION
+// ============================================
+function renderQ() {
+  const q = questions[current];
+  document.getElementById('qCounter').textContent = `Question ${current+1} of ${questions.length}`;
+  document.getElementById('qText').textContent = q.question_text;
+  document.getElementById('sectionPill').textContent = '📚 ' + (q.section || 'General');
+  document.getElementById('progressFill').style.width = `${((current+1)/questions.length)*100}%`;
+
+  const opts = document.getElementById('optionsContainer');
+  opts.innerHTML = '';
+  ['A','B','C','D'].forEach((letter, i) => {
+    const optText = q[`option_${letter.toLowerCase()}`];
+    const div = document.createElement('div');
+    div.className = 'option' + (answers[current] === letter ? ' selected' : '');
+    div.innerHTML = `<div class="option-label">${letter}</div><span>${optText}</span>`;
+    div.onclick = () => selectAnswer(letter);
+    opts.appendChild(div);
+  });
+
+  updatePalette();
+  updateStats();
+}
+
+function selectAnswer(letter) { answers[current] = letter; renderQ(); }
+function prevQ() { if(current>0){current--;renderQ();} }
+function nextQ() { if(current<questions.length-1){current++;renderQ();} }
+function markQ() { marked[current]=!marked[current]; updatePalette(); }
+
+function updatePalette() {
+  const p = document.getElementById('palette');
+  p.innerHTML = '';
+  questions.forEach((_,i) => {
+    const b = document.createElement('button');
+    b.className = 'q-btn' + (i===current?' current':marked[i]?' marked':answers[i]?' answered':'');
+    b.textContent = i+1;
+    b.onclick = () => { current=i; renderQ(); };
+    p.appendChild(b);
+  });
+}
+
+function updateStats() {
+  document.getElementById('answeredCount').textContent = answers.filter(a=>a!==null).length;
+}
+
+// ============================================
+// SUBMIT — Supabase mein save karo
+// ============================================
+async function submitQuiz() {
+  clearInterval(interval);
+  document.getElementById('submitOverlay').classList.add('show');
+
+  let correct=0, wrong=0, skipped=0;
+  const mc = parseFloat(quizData?.marks_correct || 2);
+  const mw = parseFloat(quizData?.marks_wrong || -0.5);
+
+  questions.forEach((q, i) => {
+    if (!answers[i]) skipped++;
+    else if (answers[i] === q.correct_option) correct++;
+    else wrong++;
+  });
+
+  const score = parseFloat((correct * mc + wrong * mw).toFixed(2));
+  const accuracy = Math.round((correct / questions.length) * 100);
+  const timeTaken = (quizData?.duration_minutes || 60) * 60 - timeLeft;
+  const userName = JSON.parse(localStorage.getItem('sscUser') || '{"name":"Guest"}').name || 'Guest';
+  const userCity = JSON.parse(localStorage.getItem('sscUser') || '{}').city || '';
+
+  // Answers object banao
+  const answersObj = {};
+  questions.forEach((q,i) => { answersObj[q.id] = answers[i] || 'skipped'; });
+
+  // Pehle LocalStorage mein save karo (backup)
+  const resultObj = { correct, wrong, skipped, score, accuracy, total:questions.length,
+    timeTaken, answers, questions: questions.map(q=>({
+      q: q.question_text,
+      opts: [q.option_a, q.option_b, q.option_c, q.option_d],
+      ans: ['A','B','C','D'].indexOf(q.correct_option),
+      section: q.section
+    }))
+  };
+  localStorage.setItem('quizResult', JSON.stringify(resultObj));
+
+  // Supabase mein save karo
+  try {
+    // 1. quiz_attempts mein insert
+    const { data: attempt, error: aErr } = await db
+      .from('quiz_attempts')
+      .insert({
+        quiz_id: quizId,
+        user_name: userName,
+        user_city: userCity,
+        score: score,
+        correct_count: correct,
+        wrong_count: wrong,
+        skipped_count: skipped,
+        accuracy: accuracy,
+        time_taken_seconds: timeTaken,
+        answers: answersObj
+      })
+      .select()
+      .single();
+
+    if (aErr) console.error('Attempt save error:', aErr.message);
+
+    // 2. rank_list mein upsert
+    if (quizId) {
+      const { error: rErr } = await db
+        .from('rank_list')
+        .upsert({
+          quiz_id: quizId,
+          user_name: userName,
+          user_city: userCity,
+          score: score,
+          accuracy: accuracy,
+          time_taken_seconds: timeTaken,
+          attempt_id: attempt?.id || null
+        }, { onConflict: 'quiz_id,user_name' });
+
+      if (rErr) console.error('Rank save error:', rErr.message);
+
+      // 3. Ranks update karo
+      await db.rpc('update_quiz_ranks', { p_quiz_id: quizId });
+
+      // 4. Quiz attempts count update
+      await db.from('quizzes').update({
+        attempts_count: (quizData.attempts_count || 0) + 1
+      }).eq('id', quizId);
+    }
+  } catch(e) {
+    console.error('Supabase error (result localStorage mein saved hai):', e);
+  }
+
+  window.location.href = 'rankpage.html' + (quizId ? '?quiz_id='+quizId : '');
+}
+
+// Start karo!
+initQuiz();
+</script>
+</body>
+</html>
